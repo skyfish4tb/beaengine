@@ -25,7 +25,7 @@ unit BeaEngineDelphi32;
 //    it under the terms of the GNU Lesser General Public License as published by
 //    the Free Software Foundation, either version 3 of the License, or
 //    (at your option) any later version.
-// 
+//
 //    BeaEngine is distributed in the hope that it will be useful,
 //    but WITHOUT ANY WARRANTY; without even the implied warranty of
 //    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
@@ -94,11 +94,31 @@ uses Windows,SysUtils;
   type
 
      TMEMORYTYPE = packed record
-          BaseRegister : longint;
-          IndexRegister : longint;
+          BaseRegister : int64;
+          IndexRegister : int64;
           Scale : longint;
           Displacement : int64;
        end;
+
+  type
+
+    TREGISTERTYPE = packed record
+         type : int64;
+         gpr : int64;
+         mmx : int64;
+         xmm : int64;
+         ymm : int64;
+         zmm : int64;
+         special : int64;
+         cr : int64;
+         dr : int64;
+         mem_management : int64;
+         mpx : int64;
+         opmask : int64;
+         segment : int64;
+         fpu : int64;
+
+      end;
 
   type
 
@@ -110,18 +130,19 @@ uses Windows,SysUtils;
           Flags : TEFLStruct;
           AddrValue : int64;
           Immediat : int64;
-          ImplicitModifiedRegs : longint;
+          ImplicitModifiedRegs : TREGISTERTYPE;
        end;
 
   type
 
-     TARGTYPE = packed record
-          ArgMnemonic : array[0..23] of AnsiChar;
-          ArgType : int64;
-          ArgSize : longint;
-		  ArgPosition : longint;
+     TOPTYPE = packed record
+          OpMnemonic : array[0..23] of AnsiChar;
+          OpType : int64;
+          OpSize : longint;
+		  OpPosition : longint;
           AccessMode : longint;
           Memory : TMEMORYTYPE;
+          Registers : TREGISTERTYPE;
           SegmentReg : longint;
        end;
 
@@ -135,53 +156,67 @@ uses Windows,SysUtils;
           Archi : longint;
           Options : int64;
           Instruction : TINSTRTYPE;
-          Argument1 : TARGTYPE;
-          Argument2 : TARGTYPE;
-          Argument3 : TARGTYPE;
-          Argument4 : TARGTYPE;
+          Operand1 : TOPTYPE;
+          Operand2 : TOPTYPE;
+          Operand3 : TOPTYPE;
+          Operand4 : TOPTYPE;
           Prefix : TPREFIXINFO;
-          Reserved_ : array[0..43] of longint;
+          Error : longint;
+          Reserved_ : array[0..48] of longint;
        end;
      TDISASM = _Disasm;
      PDISASM = ^_Disasm;
      LPDISASM = ^_Disasm;
 
   const
-     ESReg = 1;     
-     DSReg = 2;     
-     FSReg = 3;     
-     GSReg = 4;     
-     CSReg = 5;     
-     SSReg = 6;     
-     InvalidPrefix = 4;     
-     SuperfluousPrefix = 2;     
-     NotUsedPrefix = 0;     
-     MandatoryPrefix = 8;     
-     InUsePrefix = 1;     
+     ESReg = 1;
+     DSReg = 2;
+     FSReg = 3;
+     GSReg = 4;
+     CSReg = 5;
+     SSReg = 6;
+     InvalidPrefix = 4;
+     SuperfluousPrefix = 2;
+     NotUsedPrefix = 0;
+     MandatoryPrefix = 8;
+     InUsePrefix = 1;
 
 
   type
      INSTRUCTION_TYPE =  Longint;
      Const
-      GENERAL_PURPOSE_INSTRUCTION   =    $10000;
-      FPU_INSTRUCTION               =    $20000;
-      MMX_INSTRUCTION               =    $40000;
-      SSE_INSTRUCTION               =    $80000;
-      SSE2_INSTRUCTION              =   $100000;
-      SSE3_INSTRUCTION              =   $200000;
-      SSSE3_INSTRUCTION             =   $400000;
-      SSE41_INSTRUCTION             =   $800000;
-      SSE42_INSTRUCTION             =  $1000000;
-      SYSTEM_INSTRUCTION            =  $2000000;
-      VM_INSTRUCTION                =  $4000000;
-      UNDOCUMENTED_INSTRUCTION      =  $8000000;
-      AMD_INSTRUCTION               = $10000000;
-      ILLEGAL_INSTRUCTION           = $20000000;
-      AES_INSTRUCTION               = $40000000;
-      CLMUL_INSTRUCTION             = $80000000;
-      AVX_INSTRUCTION               =$100000000;
-      AVX2_INSTRUCTION              =$200000000;
-      MPX_INSTRUCTION               =$400000000;
+       GENERAL_PURPOSE_INSTRUCTION   =           $10000;
+       FPU_INSTRUCTION               =           $20000;
+       MMX_INSTRUCTION               =           $30000;
+       SSE_INSTRUCTION               =           $40000;
+       SSE2_INSTRUCTION              =           $50000;
+       SSE3_INSTRUCTION              =           $60000;
+       SSSE3_INSTRUCTION             =           $70000;
+       SSE41_INSTRUCTION             =           $80000;
+       SSE42_INSTRUCTION             =           $90000;
+       SYSTEM_INSTRUCTION            =           $a0000;
+       VM_INSTRUCTION                =           $b0000;
+       UNDOCUMENTED_INSTRUCTION      =           $c0000;
+       AMD_INSTRUCTION               =           $d0000;
+       ILLEGAL_INSTRUCTION           =           $e0000;
+       AES_INSTRUCTION               =           $f0000;
+       CLMUL_INSTRUCTION             =          $100000;
+       AVX_INSTRUCTION               =          $110000;
+       AVX2_INSTRUCTION              =          $120000;
+       MPX_INSTRUCTION               =          $130000;
+       AVX512_INSTRUCTION            =          $140000;
+       SHA_INSTRUCTION               =          $150000;
+       BMI2_INSTRUCTION              =          $160000;
+       CET_INSTRUCTION               =          $170000;
+       BMI1_INSTRUCTION              =          $180000;
+       XSAVEOPT_INSTRUCTION          =          $190000;
+       FSGSBASE_INSTRUCTION          =          $1a0000;
+       CLWB_INSTRUCTION              =          $1b0000;
+       CLFLUSHOPT_INSTRUCTION        =          $1c0000;
+       FXSR_INSTRUCTION              =          $1d0000;
+       XSAVE_INSTRUCTION             =          $1e0000;
+       SGX_INSTRUCTION               =          $1f0000;
+       PCONFIG_INSTRUCTION           =          $200000;
        DATA_TRANSFER = $1;
        ARITHMETIC_INSTRUCTION = 2;
        LOGICAL_INSTRUCTION = 3;
@@ -268,22 +303,25 @@ uses Windows,SysUtils;
   type
      ARGUMENTS_TYPE =  Longint;
      Const
-       NO_ARGUMENT = $10000000;
-       REGISTER_TYPE = $20000000;
-       MEMORY_TYPE = $40000000;
-       CONSTANT_TYPE = $80000000;
+       NO_ARGUMENT = $10000;
+       REGISTER_TYPE = $20000;
+       MEMORY_TYPE = $30000;
+       CONSTANT_TYPE = $40000;
 
-       MMX_REG = $10000;
-       GENERAL_REG = $20000;
-       FPU_REG = $40000;
-       SSE_REG = $80000;
-       CR_REG = $100000;
-       DR_REG = $200000;
-       SPECIAL_REG = $400000;
-       MEMORY_MANAGEMENT_REG = $800000;
-       SEGMENT_REG = $1000000;
-       AVX_REG = $2000000;
-       MPX_REG = $2000000;
+
+       GENERAL_REG =               $1;
+       MMX_REG =                   $2;
+       SSE_REG =                   $4;
+       AVX_REG =                   $8;
+       AVX512_REG =                $10;
+       SPECIAL_REG =               $20;
+       CR_REG =                    $40;
+       DR_REG =                    $80;
+       MEMORY_MANAGEMENT_REG =     $100;
+       MPX_REG =                   $200;
+       OPMASK_REG =                $400;
+       SEGMENT_REG =               $800;
+       FPU_REG =                   $1000;
 
        RELATIVE_ = $4000000;
        ABSOLUTE_ = $8000000;
@@ -307,34 +345,50 @@ uses Windows,SysUtils;
        REG13 = $2000;
        REG14 = $4000;
        REG15 = $8000;
-
+       REG16 = $10000;
+       REG17 = $20000;
+       REG18 = $40000;
+       REG19 = $80000;
+       REG20 = $100000;
+       REG21 = $200000;
+       REG22 = $400000;
+       REG23 = $800000;
+       REG24 = $1000000;
+       REG25 = $2000000;
+       REG26 = $4000000;
+       REG27 = $8000000;
+       REG28 = $10000000;
+       REG29 = $20000000;
+       REG30 = $40000000;
+       REG31 = $80000000;
   type
      SPECIAL_INFO =  Longint;
      Const
-       UNKNOWN_OPCODE = -(1);
-       OUT_OF_BLOCK = 0;
+      UNKNOWN_OPCODE = -(1);
+      OUT_OF_BLOCK = -(2);
   { === mask = 0xff }
-       NoTabulation = $00000000;
-       Tabulation = $00000001;
+      NoTabulation = $00000000;
+      Tabulation = $00000001;
   { === mask = 0xff00 }
-       MasmSyntax = $00000000;
-       GoAsmSyntax = $00000100;
-       NasmSyntax = $00000200;
-       ATSyntax = $00000400;
-       IntrinsicMemSyntax = $00000800;
+      MasmSyntax = $00000000;
+      GoAsmSyntax = $00000100;
+      NasmSyntax = $00000200;
+      ATSyntax = $00000400;
+      IntrinsicMemSyntax = $00000800;
   { === mask = 0xff0000 }
-       PrefixedNumeral = $00010000;
-       SuffixedNumeral = $00000000;
+      PrefixedNumeral = $00010000;
+      SuffixedNumeral = $00000000;
   { === mask = 0xff000000 }
-       ShowSegmentRegs = $01000000;
-	   LowPosition = 0;
-	   HighPosition = 1;
+      ShowSegmentRegs = $01000000;
+      ShowEVEXMasking = $02000000;
+	    LowPosition = 0;
+	    HighPosition = 1;
 
 
   function Disasm(var aDisAsm:TDISASM):longint;stdcall;
   function BeaEngineVersion:longint;stdcall;
   function BeaEngineRevision:longint;stdcall;
-  
+
 implementation
 {$IFNDEF USEDLL}
 {$L BeaEngineLib.obj}

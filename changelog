@@ -1,0 +1,14 @@
+# BeaEngine 5
+
+- new instructions sets : AVX512, CET, SGX, BMI1, BMI2, SHA
+- more than 10k assertions to test the lib (BeaEngine is now implemented in some TDD style)
+- more than 20k instructions encoding listed (not yet released)
+- new python wrapper to hide ctypes complexity
+- fix issues on prefixes (precedences and conflicts)
+- fix SecurityBlock issues
+- add #UD Exception
+- new structure REGISTER_TYPE for Operands and ImplicitModifiedRegs
+- Renaming Arguments fields to Operands fields
+- new infos.Error field to check the state of the output
+- new option to show/hide EVEX merging/zeroing applyied on first operand
+- new documentation and new examples

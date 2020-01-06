@@ -21,6 +21,7 @@
  * ==================================================================== */
 void __bea_callspec__ G1_EbIb(PDISASM pMyDisasm)
 {
+    if (!Security(1, pMyDisasm)) return;
     GV.REGOPCODE = ((*((UInt8*)(UIntPtr) (GV.EIP_+1))) >> 3) & 0x7;
     EbIb(pMyDisasm);
     if (GV.REGOPCODE == 0) {
@@ -101,7 +102,7 @@ void __bea_callspec__ G1_EbIb(PDISASM pMyDisasm)
            (void) strcpy ((*pMyDisasm).Instruction.Mnemonic, "cmp ");
         #endif
         FillFlags(pMyDisasm, 20);
-        (*pMyDisasm).Argument1.AccessMode = READ;
+        (*pMyDisasm).Operand1.AccessMode = READ;
     }
 }
 
@@ -123,6 +124,7 @@ void __bea_callspec__ G1_EbIb2(PDISASM pMyDisasm)
  * ==================================================================== */
 void __bea_callspec__ G1_EvIv(PDISASM pMyDisasm)
 {
+    if (!Security(1, pMyDisasm)) return;
     GV.REGOPCODE = ((*((UInt8*)(UIntPtr) (GV.EIP_+1))) >> 3) & 0x7;
     EvIv(pMyDisasm);
     if (GV.REGOPCODE == 0) {
@@ -203,7 +205,7 @@ void __bea_callspec__ G1_EvIv(PDISASM pMyDisasm)
            (void) strcpy ((*pMyDisasm).Instruction.Mnemonic, "cmp ");
         #endif
         FillFlags(pMyDisasm, 20);
-        (*pMyDisasm).Argument1.AccessMode = READ;
+        (*pMyDisasm).Operand1.AccessMode = READ;
     }
 }
 
@@ -212,6 +214,7 @@ void __bea_callspec__ G1_EvIv(PDISASM pMyDisasm)
  * ==================================================================== */
 void __bea_callspec__ G1_EvIb(PDISASM pMyDisasm)
 {
+    if (!Security(1, pMyDisasm)) return;
     GV.REGOPCODE = ((*((UInt8*)(UIntPtr) (GV.EIP_+1))) >> 3) & 0x7;
     EvIb(pMyDisasm);
     if (GV.REGOPCODE == 0) {
@@ -292,6 +295,6 @@ void __bea_callspec__ G1_EvIb(PDISASM pMyDisasm)
            (void) strcpy ((*pMyDisasm).Instruction.Mnemonic, "cmp ");
         #endif
         FillFlags(pMyDisasm, 20);
-        (*pMyDisasm).Argument1.AccessMode = READ;
+        (*pMyDisasm).Operand1.AccessMode = READ;
     }
 }

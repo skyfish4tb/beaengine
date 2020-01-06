@@ -1,4 +1,4 @@
-/* Copyright 2006-2009, BeatriX
+/* Copyright 2006-2019, BeatriX
  * File coded by BeatriX
  *
  * This file is part of BeaEngine.
@@ -21,6 +21,7 @@
  * ==================================================================== */
 void __bea_callspec__ G4_Eb(PDISASM pMyDisasm)
 {
+    if (!Security(1, pMyDisasm)) return;
     GV.REGOPCODE = ((*((UInt8*)(UIntPtr) (GV.EIP_+1))) >> 3) & 0x7;
     if (GV.REGOPCODE == 0) {
         if ((*pMyDisasm).Prefix.LockPrefix == InvalidPrefix) {
@@ -31,6 +32,9 @@ void __bea_callspec__ G4_Eb(PDISASM pMyDisasm)
            (void) strcpy ((*pMyDisasm).Instruction.Mnemonic, "inc ");
         #endif
         Eb(pMyDisasm);
+        if (((*pMyDisasm).Prefix.LockPrefix == InUsePrefix) && (GV.MOD_ == 0x3)) {
+            GV.ERROR_OPCODE = UD_;
+        }
         FillFlags(pMyDisasm, 40);
     }
     else if (GV.REGOPCODE == 1) {
@@ -42,10 +46,12 @@ void __bea_callspec__ G4_Eb(PDISASM pMyDisasm)
            (void) strcpy ((*pMyDisasm).Instruction.Mnemonic, "dec ");
         #endif
         Eb(pMyDisasm);
+        if (((*pMyDisasm).Prefix.LockPrefix == InUsePrefix) && (GV.MOD_ == 0x3)) {
+            GV.ERROR_OPCODE = UD_;
+        }
         FillFlags(pMyDisasm, 30);
     }
     else {
         FailDecode(pMyDisasm);
     }
 }
-

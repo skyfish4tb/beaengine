@@ -51,12 +51,30 @@ EndStructure
 Global Eflstruct.EFLStruct
 
 Structure MEMORYTYPE
-  BaseRegister.l
-  IndexRegister.l
+  BaseRegister.q
+  IndexRegister.q
   Scale.l
   Displacement.q
 EndStructure
 Global Memorytype.MEMORYTYPE
+
+Structure REGISTERTYPE
+   type.q
+   gpr.q
+   mmx.q
+   xmm.q
+   ymm.q
+   zmm.q
+   special.q
+   cr.q
+   dr.q
+   mem_management.q
+   mpx.q
+   opmask.q
+   segment.q
+   fpu.q
+EndStructure
+Global Registertype.REGISTERTYPE
 
 Structure INSTRTYPE
   Category.l
@@ -66,20 +84,21 @@ Structure INSTRTYPE
   Flags.EFLStruct
   AddrValue.q
   Immediat.q
-  ImplicitModifiedRegs.l
+  ImplicitModifiedRegs.REGISTERTYPE
 EndStructure
 Global Instrtype.INSTRTYPE
 
-Structure ARGTYPE
-  ArgMnemonic.b[24]
-  ArgType.q
-  ArgSize.l
-  ArgPosition.l
+Structure OPTYPE
+  OpMnemonic.b[24]
+  OpType.q
+  OpSize.l
+  OpPosition.l
   AccessMode.l
   Memory.MEMORYTYPE
-  SegmentReg.l 
+  Registers.REGISTERTYPE
+  SegmentReg.l
 EndStructure
-Global Argtype.ARGTYPE
+Global Argtype.OPTYPE
 
 Structure _Disasm
   EIP.q
@@ -89,12 +108,13 @@ Structure _Disasm
   Archi.l
   Options.q
   Instruction.INSTRTYPE
-  Argument1.ARGTYPE
-  Argument2.ARGTYPE
-  Argument3.ARGTYPE
-  Argument4.ARGTYPE
+  Operand1.OPTYPE
+  Operand2.OPTYPE
+  Operand3.OPTYPE
+  Operand4.OPTYPE
   Prefix.PREFIXINFO
-  Reserved_.l[44]
+  Error.l
+  Reserved_.l[48]
 EndStructure
 Global MyDisasm._Disasm
 
@@ -128,25 +148,38 @@ Global MyDisasm._Disasm
 ;                                       INSTRUCTION_TYPE
 ; __________________________________________________________________________________________________________
 
-#GENERAL_PURPOSE_INSTRUCTION = $00010000
-#FPU_INSTRUCTION             = $00020000
-#MMX_INSTRUCTION             = $00040000
-#SSE_INSTRUCTION             = $00080000
-#SSE2_INSTRUCTION            = $00100000
-#SSE3_INSTRUCTION            = $00200000
-#SSSE3_INSTRUCTION           = $00400000
-#SSE41_INSTRUCTION           = $00800000
-#SSE42_INSTRUCTION           = $01000000
-#SYSTEM_INSTRUCTION          = $02000000
-#VM_INSTRUCTION              = $04000000
-UNDOCUMENTED_INSTRUCTION     = $08000000
-AMD_INSTRUCTION              = $10000000
-ILLEGAL_INSTRUCTION          = $20000000
-AES_INSTRUCTION              = $40000000
-CLMUL_INSTRUCTION            = $80000000
-AVX_INSTRUCTION              = $100000000
-AVX2_INSTRUCTION             = $200000000
-MPX_INSTRUCTION              = $400000000
+#GENERAL_PURPOSE_INSTRUCTION   =           $10000
+#FPU_INSTRUCTION               =           $20000
+#MMX_INSTRUCTION               =           $30000
+#SSE_INSTRUCTION               =           $40000
+#SSE2_INSTRUCTION              =           $50000
+#SSE3_INSTRUCTION              =           $60000
+#SSSE3_INSTRUCTION             =           $70000
+#SSE41_INSTRUCTION             =           $80000
+#SSE42_INSTRUCTION             =           $90000
+#SYSTEM_INSTRUCTION            =           $a0000
+#VM_INSTRUCTION                =           $b0000
+#UNDOCUMENTED_INSTRUCTION      =           $c0000
+#AMD_INSTRUCTION               =           $d0000
+#ILLEGAL_INSTRUCTION           =           $e0000
+#AES_INSTRUCTION               =           $f0000
+#CLMUL_INSTRUCTION             =          $100000
+#AVX_INSTRUCTION               =          $110000
+#AVX2_INSTRUCTION              =          $120000
+#MPX_INSTRUCTION               =          $130000
+#AVX512_INSTRUCTION            =          $140000
+#SHA_INSTRUCTION               =          $150000
+#BMI2_INSTRUCTION              =          $160000
+#CET_INSTRUCTION               =          $170000
+#BMI1_INSTRUCTION              =          $180000
+#XSAVEOPT_INSTRUCTION          =          $190000
+#FSGSBASE_INSTRUCTION          =          $1a0000
+#CLWB_INSTRUCTION              =          $1b0000
+#CLFLUSHOPT_INSTRUCTION        =          $1c0000
+#FXSR_INSTRUCTION              =          $1d0000
+#XSAVE_INSTRUCTION             =          $1e0000
+#SGX_INSTRUCTION               =          $1f0000
+#PCONFIG_INSTRUCTION           =          $200000
 
 #DATA_TRANSFER               = 1
 #ARITHMETIC_INSTRUCTION      = 2
@@ -165,7 +198,7 @@ MPX_INSTRUCTION              = $400000000
 #LOGARITHMIC_INSTRUCTION     = 14
 #TRIGONOMETRIC_INSTRUCTION   = 15
 #UNSUPPORTED_INSTRUCTION     = 16
-   
+
 #LOAD_CONSTANTS              = 17
 #FPUCONTROL                  = 18
 #STATE_MANAGEMENT            = 19
@@ -177,21 +210,21 @@ MPX_INSTRUCTION              = $400000000
 #SIMD128bits                 = 23
 #SIMD64bits                  = 24
 #CACHEABILITY_CONTROL        = 25
-   
+
 #FP_INTEGER_CONVERSION       = 26
 #SPECIALIZED_128bits         = 27
 #SIMD_FP_PACKED              = 28
 #SIMD_FP_HORIZONTAL          = 29
 #AGENT_SYNCHRONISATION       = 30
 
-#PACKED_ALIGN_RIGHT          = 31 
+#PACKED_ALIGN_RIGHT          = 31
 #PACKED_SIGN                 = 32
 
 ; ****************************************** SSE4
-   
+
 #PACKED_BLENDING_INSTRUCTION = 33
 #PACKED_TEST                 = 34
-   
+
 ; CONVERSION_INSTRUCTION -> Packed Integer Format Conversions et Dword Packing With Unsigned Saturation
 ; COMPARISON -> Packed Comparison SIMD Integer Instruction
 ; ARITHMETIC_INSTRUCTION -> Dword Multiply Instruction
@@ -207,7 +240,7 @@ MPX_INSTRUCTION              = $400000000
 #ACCELERATOR_INSTRUCTION     = 42
 #ROUND_INSTRUCTION           = 43
 
-; __________________________________________________________________________________________________________
+; ______________D____________________________________________________________________________________________
 ;
 ;                                       BranchTYPE
 ; __________________________________________________________________________________________________________
@@ -240,22 +273,24 @@ MPX_INSTRUCTION              = $400000000
 ;                                       ARGUMENTS_TYPE
 ; __________________________________________________________________________________________________________
 
-#NO_ARGUMENT                 = $10000000
-#REGISTER_TYPE               = $20000000
-#MEMORY_TYPE                 = $40000000
-#CONSTANT_TYPE               = $80000000
+#NO_ARGUMENT                 = $10000
+#REGISTER_TYPE               = $20000
+#MEMORY_TYPE                 = $30000
+#CONSTANT_TYPE               = $40000
 
-#MMX_REG                     = $00010000
-#GENERAL_REG                 = $00020000
-#FPU_REG                     = $00040000
-#SSE_REG                     = $00080000
-#CR_REG                      = $00100000
-#DR_REG                      = $00200000
-#SPECIAL_REG                 = $00400000
-#MEMORY_MANAGEMENT_REG       = $00800000       ; GDTR (REG0), LDTR (REG1), IDTR (REG2), TR (REG3)
-#SEGMENT_REG                 = $01000000       ; ES (REG0), CS (REG1), SS (REG2), DS (REG3), FS (REG4), GS (REG5)
-#AVX_REG                     = $02000000
-#MPX_REG                     = $04000000
+#GENERAL_REG                 = $1
+#MMX_REG                     = $2
+#SSE_REG                     = $4
+#AVX_REG                     = $8
+#AVX512_REG                  = $10
+#SPECIAL_REG                 = $20       ; MXCSR (REG1)
+#CR_REG                      = $40
+#DR_REG                      = $80
+#MEMORY_MANAGEMENT_REG       = $100      ; GDTR (REG0), LDTR (REG1), IDTR (REG2), TR (REG3)
+#MPX_REG                     = $200
+#OPMASK_REG                  = $400
+#SEGMENT_REG                 = $800      ; ES (REG0), CS (REG1), SS (REG2), DS (REG3), FS (REG4), GS (REG5)
+#FPU_REG                     = $1000
 
 #RELATIVE_                   = $04000000
 #ABSOLUTE_                   = $08000000
@@ -279,10 +314,26 @@ MPX_INSTRUCTION              = $400000000
 #REG13                       = $2000   ; 3Dh
 #REG14                       = $4000   ; 3Eh
 #REG15                       = $8000   ; 3Fh
+#REG16 = $10000
+#REG17 = $20000
+#REG18 = $40000
+#REG19 = $80000
+#REG20 = $100000
+#REG21 = $200000
+#REG22 = $400000
+#REG23 = $800000
+#REG24 = $1000000
+#REG25 = $2000000
+#REG26 = $4000000
+#REG27 = $8000000
+#REG28 = $10000000
+#REG29 = $20000000
+#REG30 = $40000000
+#REG31 = $80000000
 
 ; ************ SPECIAL_REG
 #UNKNOWN_OPCODE              = -1
-#OUT_OF_BLOCK                = 0
+#OUT_OF_BLOCK                = -2
 #NoTabulation                = 0
 #Tabulation                  = 1
 #MasmSyntax                  = 0
@@ -293,4 +344,5 @@ MPX_INSTRUCTION              = $400000000
 #PrefixedNumeral             = $10000
 #SuffixedNumeral             = 0
 #ShowSegmentRegs             = $01000000
+#ShowEVEXMasking             = $02000000
 ;------- End Header

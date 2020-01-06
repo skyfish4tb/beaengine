@@ -21,65 +21,72 @@
  * ==================================================================== */
 void __bea_callspec__ G16_(PDISASM pMyDisasm)
 {
-    GV.REGOPCODE = ((*((UInt8*)(UIntPtr) (GV.EIP_+1))) >> 3) & 0x7;
-    if (GV.REGOPCODE == 0) {
-        MOD_RM(&(*pMyDisasm).Argument2, pMyDisasm);
-        if (GV.MOD_!= 0x3) {
-            GV.MemDecoration = Arg2byte;
-            (*pMyDisasm).Instruction.Category = SSE_INSTRUCTION+CACHEABILITY_CONTROL;
-            #ifndef BEA_LIGHT_DISASSEMBLY
-               (void) strcpy ((*pMyDisasm).Instruction.Mnemonic, "prefetchNTA ");
-            #endif
-        }
-        else {
-            FailDecode(pMyDisasm);
-        }
+  if (GV.VEX.state == InUsePrefix) { FailDecode(pMyDisasm); return; }
+  if (!Security(1, pMyDisasm)) return;
+  GV.REGOPCODE = ((*((UInt8*)(UIntPtr) (GV.EIP_+1))) >> 3) & 0x7;
+  if (GV.REGOPCODE == 0) {
+    if (!Security(1, pMyDisasm)) return;
+    GV.MOD_= ((*((UInt8*)(UIntPtr) (GV.EIP_+1))) >> 6) & 0x3;
+    if (GV.MOD_!= 0x3) {
+      MOD_RM(&(*pMyDisasm).Operand2, pMyDisasm);
+      GV.MemDecoration = Arg2byte;
+      (*pMyDisasm).Instruction.Category = SSE_INSTRUCTION+CACHEABILITY_CONTROL;
+      #ifndef BEA_LIGHT_DISASSEMBLY
+         (void) strcpy ((*pMyDisasm).Instruction.Mnemonic, "prefetchNTA ");
+      #endif
     }
-    else if (GV.REGOPCODE == 1) {
-        MOD_RM(&(*pMyDisasm).Argument2, pMyDisasm);
-        if (GV.MOD_!= 0x3) {
-            GV.MemDecoration = Arg2byte;
-            (*pMyDisasm).Instruction.Category = SSE_INSTRUCTION+CACHEABILITY_CONTROL;
-            #ifndef BEA_LIGHT_DISASSEMBLY
-               (void) strcpy ((*pMyDisasm).Instruction.Mnemonic, "prefetchT0 ");
-            #endif
-        }
-        else {
-            FailDecode(pMyDisasm);
-        }
-
+    else {
+      FailDecode(pMyDisasm);
     }
-    else if (GV.REGOPCODE == 2) {
-        MOD_RM(&(*pMyDisasm).Argument2, pMyDisasm);
-        if (GV.MOD_!= 0x3) {
-            GV.MemDecoration = Arg2byte;
-            (*pMyDisasm).Instruction.Category = SSE_INSTRUCTION+CACHEABILITY_CONTROL;
-            #ifndef BEA_LIGHT_DISASSEMBLY
-               (void) strcpy ((*pMyDisasm).Instruction.Mnemonic, "prefetchT1 ");
-            #endif
-        }
-        else {
-            FailDecode(pMyDisasm);
-        }
+  }
+  else if (GV.REGOPCODE == 1) {
 
+    if (!Security(1, pMyDisasm)) return;
+    GV.MOD_= ((*((UInt8*)(UIntPtr) (GV.EIP_+1))) >> 6) & 0x3;
+    if (GV.MOD_!= 0x3) {
+      MOD_RM(&(*pMyDisasm).Operand2, pMyDisasm);
+      GV.MemDecoration = Arg2byte;
+      (*pMyDisasm).Instruction.Category = SSE_INSTRUCTION+CACHEABILITY_CONTROL;
+      #ifndef BEA_LIGHT_DISASSEMBLY
+         (void) strcpy ((*pMyDisasm).Instruction.Mnemonic, "prefetchT0 ");
+      #endif
     }
-    else if (GV.REGOPCODE == 3) {
-        MOD_RM(&(*pMyDisasm).Argument2, pMyDisasm);
-        if (GV.MOD_!= 0x3) {
-            GV.MemDecoration = Arg2byte;
-            (*pMyDisasm).Instruction.Category = SSE_INSTRUCTION+CACHEABILITY_CONTROL;
-            #ifndef BEA_LIGHT_DISASSEMBLY
-               (void) strcpy ((*pMyDisasm).Instruction.Mnemonic, "prefetchT2 ");
-            #endif
-        }
-        else {
-            FailDecode(pMyDisasm);
-        }
-
+    else {
+      FailDecode(pMyDisasm);
     }
-
+  }
+  else if (GV.REGOPCODE == 2) {
+    if (!Security(1, pMyDisasm)) return;
+    GV.MOD_= ((*((UInt8*)(UIntPtr) (GV.EIP_+1))) >> 6) & 0x3;
+    if (GV.MOD_!= 0x3) {
+      MOD_RM(&(*pMyDisasm).Operand2, pMyDisasm);
+      GV.MemDecoration = Arg2byte;
+      (*pMyDisasm).Instruction.Category = SSE_INSTRUCTION+CACHEABILITY_CONTROL;
+      #ifndef BEA_LIGHT_DISASSEMBLY
+         (void) strcpy ((*pMyDisasm).Instruction.Mnemonic, "prefetchT1 ");
+      #endif
+    }
     else {
         FailDecode(pMyDisasm);
     }
-    GV.EIP_+= GV.DECALAGE_EIP+2;
+  }
+  else if (GV.REGOPCODE == 3) {
+    if (!Security(1, pMyDisasm)) return;
+    GV.MOD_= ((*((UInt8*)(UIntPtr) (GV.EIP_+1))) >> 6) & 0x3;
+    if (GV.MOD_!= 0x3) {
+      MOD_RM(&(*pMyDisasm).Operand2, pMyDisasm);
+      GV.MemDecoration = Arg2byte;
+      (*pMyDisasm).Instruction.Category = SSE_INSTRUCTION+CACHEABILITY_CONTROL;
+      #ifndef BEA_LIGHT_DISASSEMBLY
+         (void) strcpy ((*pMyDisasm).Instruction.Mnemonic, "prefetchT2 ");
+      #endif
+    }
+    else {
+        FailDecode(pMyDisasm);
+    }
+  }
+  else {
+    FailDecode(pMyDisasm);
+  }
+  GV.EIP_+= GV.DECALAGE_EIP+2;
 }

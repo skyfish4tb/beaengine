@@ -165,11 +165,13 @@ EFLStruct EFLAGS_TABLE[] = {
     {TE_, TE_, 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0}, /* 122 - jl jnge jnl jge http://ref.x86asm.net/coder.html */
     {UN_, UN_, UN_, UN_, UN_, MO_, 0  , 0  , 0  , 0  , 0  , 0}, /* 123 - adcx */
     {MO_, UN_, UN_, UN_, UN_, UN_, 0  , 0  , 0  , 0  , 0  , 0}, /* 124 - adox */
-    {0  , 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0},  /* 125 - mulx */
-    {RE_, MO_, MO_, UN_, UN_, RE_, 0  , 0  , 0  , 0  , 0  , 0},   /* 126 - andn */
-    {RE_, UN_, MO_, UN_, UN_, RE_, RE_, RE_, RE_, RE_, RE_, 0},    /* 127 - bextr */
-    {RE_, MO_, MO_, UN_, UN_, MO_, 0  , 0  , 0  , 0  , 0  , 0},    /* 128 - bzhi */
-    {0  , 0  , 0  , RE_, 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0}  /* 129 - clac */
+    {0  , 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0}, /* 125 - mulx */
+    {RE_, MO_, MO_, UN_, UN_, RE_, 0  , 0  , 0  , 0  , 0  , 0}, /* 126 - andn */
+    {RE_, UN_, MO_, UN_, UN_, RE_, RE_, RE_, RE_, RE_, RE_, 0}, /* 127 - bextr */
+    {RE_, MO_, MO_, UN_, UN_, MO_, 0  , 0  , 0  , 0  , 0  , 0}, /* 128 - bzhi */
+    {0  , 0  , 0  , RE_, 0  , 0  , 0  , 0  , 0  , 0  , 0  , 0}, /* 129 - clac */
+    {RE_, RE_, RE_, RE_, RE_, MO_, 0  , 0  , 0  , 0  , 0  , 0}, /* 130 - encls */
+    {RE_, RE_, UN_, RE_, RE_, UN_, 0  , 0  , 0  , 0  , 0  , 0}  /* 131 - enclu */
     /*OF, SF , ZF , AF , PF , CF , TF , IF , DF , NT , RF , Align */
     };
 /* =====================================================
@@ -215,6 +217,7 @@ char SegmentRegs[7][4] = {
 #define     Arg1_m128i_xmm  11
 #define     Arg1_m128d_xmm  12
 #define     Arg1_m256d_ymm  13
+#define     Arg1_m512_zmm   14
 
 #define     Arg2byte        101
 #define     Arg2word        102
@@ -229,6 +232,7 @@ char SegmentRegs[7][4] = {
 #define     Arg2_m128i_xmm  111
 #define     Arg2_m128d_xmm  112
 #define     Arg2_m256d_ymm  113
+#define     Arg2_m512_zmm   114
 
 #define     Arg3byte        201
 #define     Arg3word        202
@@ -243,6 +247,7 @@ char SegmentRegs[7][4] = {
 #define     Arg3_m128i_xmm  211
 #define     Arg3_m128d_xmm  212
 #define     Arg3_m256d_ymm  213
+#define     Arg3_m512_zmm   214
 
 #define     Arg4byte        301
 #define     Arg4word        302
@@ -257,8 +262,11 @@ char SegmentRegs[7][4] = {
 #define     Arg4_m128i_xmm  311
 #define     Arg4_m128d_xmm  312
 #define     Arg4_m256d_ymm  313
+#define     Arg4_m512_zmm   314
 
-#define nbMemoryTypes 13
+#define nbMemoryTypes 14
+
+int ArgsSize[nbMemoryTypes] = { 8, 16, 32, 64, 0, 80, 48, 128, 128, 256, 128, 128, 256, 512 };
 
 /* =====================================================
  * Intrinsic representation of prefixes
@@ -276,7 +284,8 @@ char IntrinsicPrefixes[nbMemoryTypes][16] = {
     "m256 ",       /* GV.MemDecoration == 10 */
     "m128i ",       /* GV.MemDecoration == 11 */
     "m128d ",       /* GV.MemDecoration == 12 */
-    "m256d "       /* GV.MemDecoration == 13 */
+    "m256d ",       /* GV.MemDecoration == 13 */
+    "m512 "
 };
 
 /* =====================================================
@@ -290,12 +299,13 @@ char ATSuffixes[nbMemoryTypes][4] = {
     " ",      /* GV.MemDecoration == 5 (multibytes) */
     "t ",     /* GV.MemDecoration == 6 */
     " ",      /* GV.MemDecoration == 7 (fword) */
-    " ",      /* GV.MemDecoration == 8 (dqword) */
-    " ",      /* GV.MemDecoration == 9 */
+    "o ",      /* GV.MemDecoration == 8 (dqword) */
+    "o ",      /* GV.MemDecoration == 9 */
     " ",       /* GV.MemDecoration == 10 */
     " ",       /* GV.MemDecoration == 11 */
     " ",       /* GV.MemDecoration == 12 */
-    " "       /* GV.MemDecoration == 13 */
+    " ",       /* GV.MemDecoration == 13 */
+    " "
 };
 
 /* =====================================================
@@ -315,7 +325,8 @@ char MasmPrefixes[nbMemoryTypes][16] = {
     "ymmword ptr ",      /* GV.MemDecoration == 10 - 256 bits long YMM registers*/
     "xmmword ptr ",     /* GV.MemDecoration == 11 - 128 bits long XMM registers */
     "xmmword ptr ",     /* GV.MemDecoration == 12 - 128 bits long XMM registers */
-    "ymmword ptr "     /* GV.MemDecoration == 13 - 256 bits long YMM registers */
+    "ymmword ptr ",     /* GV.MemDecoration == 13 - 256 bits long YMM registers */
+    "zmmword ptr "     /* GV.MemDecoration == 14 - 512 bits long ZMM registers */
 };
 
 /* =====================================================
@@ -334,7 +345,8 @@ char NasmPrefixes[nbMemoryTypes][8] = {
     " ",       /* GV.MemDecoration == 10 */
     " ",       /* GV.MemDecoration == 11 */
     " ",       /* GV.MemDecoration == 12 */
-    " "       /* GV.MemDecoration == 13 */
+    " ",       /* GV.MemDecoration == 13 */
+    " "       /* GV.MemDecoration == 14 */
 };
 
 
@@ -355,7 +367,8 @@ char GoAsmPrefixes[nbMemoryTypes][4] = {
     " ",       /* GV.MemDecoration == 10 */
     " ",       /* GV.MemDecoration == 11 */
     " ",       /* GV.MemDecoration == 12 */
-    " "       /* GV.MemDecoration == 13 */
+    " ",       /* GV.MemDecoration == 13 */
+    " "       /* GV.MemDecoration == 14 */
 };
 
 
@@ -627,7 +640,7 @@ char RegistersMMX[8][4] = {
 /* =====================================================
  * SSE Registers
  * ===================================================== */
-char RegistersSSE[16][8] = {
+char RegistersSSE[32][8] = {
     "xmm0",
     "xmm1",
     "xmm2",
@@ -644,12 +657,28 @@ char RegistersSSE[16][8] = {
     "xmm13",    /* SSE3, SSSE3, SSE4 */
     "xmm14",    /* SSE3, SSSE3, SSE4 */
     "xmm15",    /* SSE3, SSSE3, SSE4 */
+    "xmm16",
+    "xmm17",
+    "xmm18",
+    "xmm19",
+    "xmm20",
+    "xmm21",
+    "xmm22",
+    "xmm23",
+    "xmm24",
+    "xmm25",
+    "xmm26",
+    "xmm27",
+    "xmm28",
+    "xmm29",
+    "xmm30",
+    "xmm31",
 };
 
 /* =====================================================
  * AVX 256 bits Registers
  * ===================================================== */
-char RegistersAVX[16][8] = {
+char RegistersAVX[32][8] = {
     "ymm0",
     "ymm1",
     "ymm2",
@@ -666,10 +695,26 @@ char RegistersAVX[16][8] = {
     "ymm13",
     "ymm14",
     "ymm15",
+    "ymm16",
+    "ymm17",
+    "ymm18",
+    "ymm19",
+    "ymm20",
+    "ymm21",
+    "ymm22",
+    "ymm23",
+    "ymm24",
+    "ymm25",
+    "ymm26",
+    "ymm27",
+    "ymm28",
+    "ymm29",
+    "ymm30",
+    "ymm31",
 };
 
 /* =====================================================
- * AVX 256 bits Registers
+ * AVX 512 bits Registers
  * ===================================================== */
 char RegistersAVX512[32][8] = {
     "zmm0",
@@ -706,7 +751,45 @@ char RegistersAVX512[32][8] = {
     "zmm31",
 };
 
-Int32 REGS[] = {
+/* =====================================================
+ * opmask registers
+ * ===================================================== */
+char RegistersOpmask[32][4] = {
+    "k0",
+    "k1",
+    "k2",
+    "k3",
+    "k4",
+    "k5",
+    "k6",
+    "k7",
+    "k?",
+    "k?",
+    "k?",
+    "k?",
+    "k?",
+    "k?",
+    "k?",
+    "k?",
+    "k?",
+    "k?",
+    "k?",
+    "k?",
+    "k?",
+    "k?",
+    "k?",
+    "k?",
+    "k?",
+    "k?",
+    "k?",
+    "k?",
+    "k?",
+    "k?",
+    "k?",
+    "k?"
+};
+
+Int64 REGS[] = {
     REG0,        /* REG0 */
     REG1,        /* REG1 */
     REG2,        /* REG2 */
@@ -723,6 +806,22 @@ Int32 REGS[] = {
     REG13,     /* REG13 */
     REG14,     /* REG14 */
     REG15,     /* REG15 */
+    REG16,
+    REG17,
+    REG18,
+    REG19,
+    REG20,
+    REG21,
+    REG22,
+    REG23,
+    REG24,
+    REG25,
+    REG26,
+    REG27,
+    REG28,
+    REG29,
+    REG30,
+    REG31
 };
 
 char BXSI_[] = "bx+si";
@@ -730,5 +829,13 @@ char BXDI_[] = "bx+di";
 char BPSI_[] = "bp+si";
 char BPDI_[] = "bp+di";
 
-
-
+char RegistersSIB[8][8] = {
+    "bx+si",
+    "bx+di",
+    "bp+si",
+    "bp+di",
+    "si",
+    "di",
+    "bp",
+    "bx"
+};

@@ -4,6 +4,7 @@
 namespace BeaEngine {
 #endif
 
+
 #include <beaengine/macros.h>
 #include <beaengine/export.h>
 #include <beaengine/basic_types.h>
@@ -20,6 +21,30 @@ namespace BeaEngine {
 
 
 #define INSTRUCT_LENGTH 64
+
+#pragma pack(1)
+typedef struct {
+   UInt8 P0;
+   UInt8 P1;
+   UInt8 P2;
+   UInt8 mm;
+   UInt8 pp;
+   UInt8 R;
+   UInt8 X;
+   UInt8 B;
+   UInt8 R1;
+   UInt8 vvvv;
+   UInt8 V;
+   UInt8 aaa;
+   UInt8 W;
+   UInt8 z;
+   UInt8 b;
+   UInt8 LL;
+   UInt8 state;
+   UInt8 masking;
+   UInt8 tupletype;
+} EVEX_Struct  ;
+#pragma pack()
 
 #pragma pack(1)
 typedef struct {
@@ -83,13 +108,31 @@ typedef struct {
 
 #pragma pack(4)
 typedef struct {
-   Int32 BaseRegister;
-   Int32 IndexRegister;
+   Int64 BaseRegister;
+   Int64 IndexRegister;
    Int32 Scale;
-   Int64 Displacement; 
+   Int64 Displacement;
 } MEMORYTYPE ;
 #pragma pack()
 
+#pragma pack(4)
+typedef struct {
+   Int64 type;
+   Int64 gpr;
+   Int64 mmx;
+   Int64 xmm;
+   Int64 ymm;
+   Int64 zmm;
+   Int64 special;
+   Int64 cr;
+   Int64 dr;
+   Int64 mem_management;
+   Int64 mpx;
+   Int64 opmask;
+   Int64 segment;
+   Int64 fpu;
+} REGISTERTYPE ;
+#pragma pack()
 
 #pragma pack(1)
 typedef struct  {
@@ -100,20 +143,21 @@ typedef struct  {
    EFLStruct Flags;
    UInt64 AddrValue;
    Int64 Immediat;
-   UInt32 ImplicitModifiedRegs;
+   REGISTERTYPE ImplicitModifiedRegs;
 } INSTRTYPE;
 #pragma pack()
 
 #pragma pack(1)
 typedef struct  {
-   char ArgMnemonic[24];
-   UInt64 ArgType;
-   Int32 ArgSize;
-   Int32 ArgPosition;
+   char OpMnemonic[24];
+   Int64 OpType;
+   Int32 OpSize;
+   Int32 OpPosition;
    UInt32 AccessMode;
    MEMORYTYPE Memory;
+   REGISTERTYPE Registers;
    UInt32 SegmentReg;
-} ARGTYPE;
+} OPTYPE;
 #pragma pack()
 
 /* reserved structure used for thread-safety */
@@ -132,11 +176,6 @@ typedef struct {
    Int32 INDEX_;
    Int32 SCALE_;
    Int32 BASE_;
-   Int32 MMX_;
-   Int32 SSE_;
-   Int32 CR_;
-   Int32 DR_;
-   Int32 SEG_;
    Int32 REGOPCODE;
    UInt32 DECALAGE_EIP;
    Int32 FORMATNUMBER;
@@ -151,13 +190,14 @@ typedef struct {
    UInt32 SEGMENTREGS;
    UInt32 SEGMENTFS;
    Int32 third_arg;
-   Int32 TAB_;
+   UInt64 OPTIONS;
    Int32 ERROR_OPCODE;
    REX_Struct REX;
    Int32 OutOfBlock;
    VEX_Struct VEX;
-   Int32 AVX_;
-   Int32 MPX_;
+   EVEX_Struct EVEX;
+   Int32 VSIB_;
+   Int32 Register_;
 } InternalDatas;
 #pragma pack()
 
@@ -171,17 +211,19 @@ typedef struct _Disasm {
    UInt32 Archi;
    UInt64 Options;
    INSTRTYPE Instruction;
-   ARGTYPE Argument1;
-   ARGTYPE Argument2;
-   ARGTYPE Argument3;
-   ARGTYPE Argument4;
+   OPTYPE Operand1;
+   OPTYPE Operand2;
+   OPTYPE Operand3;
+   OPTYPE Operand4;
    PREFIXINFO Prefix;
+   Int32 Error;
    InternalDatas Reserved_;
 } DISASM, *PDISASM, *LPDISASM;
 #pragma pack()
 
 /* #UD exception */
 #define UD_   2
+#define DE__  3
 
 #define ESReg 1
 #define DSReg 2
@@ -199,70 +241,109 @@ typedef struct _Disasm {
 #define LowPosition 0
 #define HighPosition 1
 
+/* EVEX Masking */
+
+#define NO_MASK 0
+#define MERGING 1
+#define MERGING_ZEROING 2
+
+/* EVEX Compressed Displacement */
+
+#define FULL              1
+#define HALF              2
+#define FULL_MEM          3
+#define TUPLE1_SCALAR__8  4
+#define TUPLE1_SCALAR__16 5
+#define TUPLE1_SCALAR     6
+#define TUPLE1_FIXED__32  7
+#define TUPLE1_FIXED__64  8
+#define TUPLE2            9
+#define TUPLE4            10
+#define TUPLE8            11
+#define HALF_MEM          12
+#define QUARTER_MEM       13
+#define EIGHTH_MEM        14
+#define MEM128            15
+#define MOVDDUP           16
+
 enum INSTRUCTION_TYPE
 {
-  GENERAL_PURPOSE_INSTRUCTION   =    0x10000,
-  FPU_INSTRUCTION               =    0x20000,
-  MMX_INSTRUCTION               =    0x40000,
-  SSE_INSTRUCTION               =    0x80000,
-  SSE2_INSTRUCTION              =   0x100000,
-  SSE3_INSTRUCTION              =   0x200000,
-  SSSE3_INSTRUCTION             =   0x400000,
-  SSE41_INSTRUCTION             =   0x800000,
-  SSE42_INSTRUCTION             =  0x1000000,
-  SYSTEM_INSTRUCTION            =  0x2000000,
-  VM_INSTRUCTION                =  0x4000000,
-  UNDOCUMENTED_INSTRUCTION      =  0x8000000,
-  AMD_INSTRUCTION               = 0x10000000,
-  ILLEGAL_INSTRUCTION           = 0x20000000,
-  AES_INSTRUCTION               = 0x40000000,
-  CLMUL_INSTRUCTION             = (int)0x80000000,
-  AVX_INSTRUCTION               = (int)0x100000000,
-  AVX2_INSTRUCTION               = (int)0x200000000,
-  MPX_INSTRUCTION               = (int)0x400000000,
-    DATA_TRANSFER = 0x1,
-    ARITHMETIC_INSTRUCTION,
-    LOGICAL_INSTRUCTION,
-    SHIFT_ROTATE,
-    BIT_UInt8,
-    CONTROL_TRANSFER,
-    STRING_INSTRUCTION,
-    InOutINSTRUCTION,
-    ENTER_LEAVE_INSTRUCTION,
-    FLAG_CONTROL_INSTRUCTION,
-    SEGMENT_REGISTER,
-    MISCELLANEOUS_INSTRUCTION,
-    COMPARISON_INSTRUCTION,
-    LOGARITHMIC_INSTRUCTION,
-    TRIGONOMETRIC_INSTRUCTION,
-    UNSUPPORTED_INSTRUCTION,
-    LOAD_CONSTANTS,
-    FPUCONTROL,
-    STATE_MANAGEMENT,
-    CONVERSION_INSTRUCTION,
-    SHUFFLE_UNPACK,
-    PACKED_SINGLE_PRECISION,
-    SIMD128bits,
-    SIMD64bits,
-    CACHEABILITY_CONTROL,
-    FP_INTEGER_CONVERSION,
-    SPECIALIZED_128bits,
-    SIMD_FP_PACKED,
-    SIMD_FP_HORIZONTAL ,
-    AGENT_SYNCHRONISATION,
-    PACKED_ALIGN_RIGHT  ,
-    PACKED_SIGN,
-    PACKED_BLENDING_INSTRUCTION,
-    PACKED_TEST,
-    PACKED_MINMAX,
-    HORIZONTAL_SEARCH,
-    PACKED_EQUALITY,
-    STREAMING_LOAD,
-    INSERTION_EXTRACTION,
-    DOT_PRODUCT,
-    SAD_INSTRUCTION,
-    ACCELERATOR_INSTRUCTION,    /* crc32, popcnt (sse4.2) */
-    ROUND_INSTRUCTION
+  GENERAL_PURPOSE_INSTRUCTION   =           0x10000,
+  FPU_INSTRUCTION               =           0x20000,
+  MMX_INSTRUCTION               =           0x30000,
+  SSE_INSTRUCTION               =           0x40000,
+  SSE2_INSTRUCTION              =           0x50000,
+  SSE3_INSTRUCTION              =           0x60000,
+  SSSE3_INSTRUCTION             =           0x70000,
+  SSE41_INSTRUCTION             =           0x80000,
+  SSE42_INSTRUCTION             =           0x90000,
+  SYSTEM_INSTRUCTION            =           0xa0000,
+  VM_INSTRUCTION                =           0xb0000,
+  UNDOCUMENTED_INSTRUCTION      =           0xc0000,
+  AMD_INSTRUCTION               =           0xd0000,
+  ILLEGAL_INSTRUCTION           =           0xe0000,
+  AES_INSTRUCTION               =           0xf0000,
+  CLMUL_INSTRUCTION             =          0x100000,
+  AVX_INSTRUCTION               =          0x110000,
+  AVX2_INSTRUCTION              =          0x120000,
+  MPX_INSTRUCTION               =          0x130000,
+  AVX512_INSTRUCTION            =          0x140000,
+  SHA_INSTRUCTION               =          0x150000,
+  BMI2_INSTRUCTION              =          0x160000,
+  CET_INSTRUCTION               =          0x170000,
+  BMI1_INSTRUCTION              =          0x180000,
+  XSAVEOPT_INSTRUCTION          =          0x190000,
+  FSGSBASE_INSTRUCTION          =          0x1a0000,
+  CLWB_INSTRUCTION              =          0x1b0000,
+  CLFLUSHOPT_INSTRUCTION        =          0x1c0000,
+  FXSR_INSTRUCTION              =          0x1d0000,
+  XSAVE_INSTRUCTION             =          0x1e0000,
+  SGX_INSTRUCTION               =          0x1f0000,
+  PCONFIG_INSTRUCTION           =          0x200000,
+	
+  DATA_TRANSFER = 0x1,
+  ARITHMETIC_INSTRUCTION,
+  LOGICAL_INSTRUCTION,
+  SHIFT_ROTATE,
+  BIT_UInt8,
+  CONTROL_TRANSFER,
+  STRING_INSTRUCTION,
+  InOutINSTRUCTION,
+  ENTER_LEAVE_INSTRUCTION,
+  FLAG_CONTROL_INSTRUCTION,
+  SEGMENT_REGISTER,
+  MISCELLANEOUS_INSTRUCTION,
+  COMPARISON_INSTRUCTION,
+  LOGARITHMIC_INSTRUCTION,
+  TRIGONOMETRIC_INSTRUCTION,
+  UNSUPPORTED_INSTRUCTION,
+  LOAD_CONSTANTS,
+  FPUCONTROL,
+  STATE_MANAGEMENT,
+  CONVERSION_INSTRUCTION,
+  SHUFFLE_UNPACK,
+  PACKED_SINGLE_PRECISION,
+  SIMD128bits,
+  SIMD64bits,
+  CACHEABILITY_CONTROL,
+  FP_INTEGER_CONVERSION,
+  SPECIALIZED_128bits,
+  SIMD_FP_PACKED,
+  SIMD_FP_HORIZONTAL ,
+  AGENT_SYNCHRONISATION,
+  PACKED_ALIGN_RIGHT  ,
+  PACKED_SIGN,
+  PACKED_BLENDING_INSTRUCTION,
+  PACKED_TEST,
+  PACKED_MINMAX,
+  HORIZONTAL_SEARCH,
+  PACKED_EQUALITY,
+  STREAMING_LOAD,
+  INSERTION_EXTRACTION,
+  DOT_PRODUCT,
+  SAD_INSTRUCTION,
+  ACCELERATOR_INSTRUCTION,    /* crc32, popcnt (sse4.2) */
+  ROUND_INSTRUCTION
 
 };
 
@@ -304,50 +385,70 @@ enum BRANCH_TYPE
 
 enum ARGUMENTS_TYPE
 {
-  NO_ARGUMENT = 0x10000000,
-  REGISTER_TYPE = 0x20000000,
-  MEMORY_TYPE = 0x40000000,
-  CONSTANT_TYPE = (UInt32)0x80000000,
+  NO_ARGUMENT =          0x10000,
+  REGISTER_TYPE =        0x20000,
+  MEMORY_TYPE =          0x30000,
+  CONSTANT_TYPE =        0x40000,
 
-  MMX_REG =                 0x10000,
-  GENERAL_REG =             0x20000,
-  FPU_REG =                 0x40000,
-  SSE_REG =                 0x80000,
-  CR_REG =                  0x100000,
-  DR_REG =                  0x200000,
-  SPECIAL_REG =             0x400000,
-  MEMORY_MANAGEMENT_REG =   0x800000,
-  SEGMENT_REG =             0x1000000,
-  AVX_REG =                 0x2000000,
-  MPX_REG =                 0x4000000,
+  GENERAL_REG =               0x1,
+  MMX_REG =                   0x2,
+  SSE_REG =                   0x4,
+  AVX_REG =                   0x8,
+  AVX512_REG =                0x10,
+  SPECIAL_REG =               0x20,
+  CR_REG =                    0x40,
+  DR_REG =                    0x80,
+  MEMORY_MANAGEMENT_REG =     0x100,
+  MPX_REG =                   0x200,
+  OPMASK_REG =                0x400,
+  SEGMENT_REG =               0x800,
+  FPU_REG =                   0x1000,
+
+
   RELATIVE_ = 0x4000000,
   ABSOLUTE_ = 0x8000000,
 
   READ = 0x1,
   WRITE = 0x2,
 
-  REG0 = 0x1,
-  REG1 = 0x2,
-  REG2 = 0x4,
-  REG3 = 0x8,
-  REG4 = 0x10,
-  REG5 = 0x20,
-  REG6 = 0x40,
-  REG7 = 0x80,
-  REG8 = 0x100,
-  REG9 = 0x200,
+  REG0 =  0x1,
+  REG1 =  0x2,
+  REG2 =  0x4,
+  REG3 =  0x8,
+  REG4 =  0x10,
+  REG5 =  0x20,
+  REG6 =  0x40,
+  REG7 =  0x80,
+  REG8 =  0x100,
+  REG9 =  0x200,
   REG10 = 0x400,
   REG11 = 0x800,
   REG12 = 0x1000,
   REG13 = 0x2000,
   REG14 = 0x4000,
-  REG15 = 0x8000
+  REG15 = 0x8000,
+  REG16 = 0x10000,
+  REG17 = 0x20000,
+  REG18 = 0x40000,
+  REG19 = 0x80000,
+  REG20 = 0x100000,
+  REG21 = 0x200000,
+  REG22 = 0x400000,
+  REG23 = 0x800000,
+  REG24 = 0x1000000,
+  REG25 = 0x2000000,
+  REG26 = 0x4000000,
+  REG27 = 0x8000000,
+  REG28 = 0x10000000,
+  REG29 = 0x20000000,
+  REG30 = 0x40000000,
+  REG31 = 0x80000000
 };
 
 enum SPECIAL_INFO
 {
   UNKNOWN_OPCODE = -1,
-  OUT_OF_BLOCK = 0,
+  OUT_OF_BLOCK = -2,
 
   /* === mask = 0xff */
   NoTabulation      = 0x00000000,
@@ -365,7 +466,8 @@ enum SPECIAL_INFO
   SuffixedNumeral   = 0x00000000,
 
   /* === mask = 0xff000000 */
-  ShowSegmentRegs   = 0x01000000
+  ShowSegmentRegs   = 0x01000000,
+  ShowEVEXMasking   = 0x02000000
 };
 
 
