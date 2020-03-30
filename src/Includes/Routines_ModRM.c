@@ -243,8 +243,8 @@ void __bea_callspec__ fillModrm0Register(OPTYPE* pMyOperand, PDISASM pMyDisasm, 
  * ======================================= */
 void __bea_callspec__ Addr_EAX(OPTYPE* pMyOperand, PDISASM pMyDisasm)
 {
-    #ifndef BEA_LIGHT_DISASSEMBLY
 	size_t i = 0;
+    #ifndef BEA_LIGHT_DISASSEMBLY
     if (GV.SYNTAX_ == ATSyntax) {
 	   (void) strcpy((char*) (*pMyOperand).OpMnemonic, "(%");
 	   i += 2;
@@ -269,8 +269,8 @@ void __bea_callspec__ Addr_EAX(OPTYPE* pMyOperand, PDISASM pMyDisasm)
  * ======================================= */
 void __bea_callspec__ Addr_ECX(OPTYPE* pMyOperand, PDISASM pMyDisasm)
 {
-    #ifndef BEA_LIGHT_DISASSEMBLY
     size_t i = 0;
+    #ifndef BEA_LIGHT_DISASSEMBLY
     if (GV.SYNTAX_ == ATSyntax) {
         (void) strcpy((char*) (*pMyOperand).OpMnemonic, "(%");
         i += 2;
@@ -296,8 +296,8 @@ void __bea_callspec__ Addr_ECX(OPTYPE* pMyOperand, PDISASM pMyDisasm)
  * ======================================= */
 void __bea_callspec__ Addr_EDX(OPTYPE* pMyOperand, PDISASM pMyDisasm)
 {
-    #ifndef BEA_LIGHT_DISASSEMBLY
 		size_t i = 0;
+    #ifndef BEA_LIGHT_DISASSEMBLY
 		if (GV.SYNTAX_ == ATSyntax) {
 			(void) strcpy((char*) (*pMyOperand).OpMnemonic, "(%");
 			i += 2;
@@ -323,8 +323,8 @@ void __bea_callspec__ Addr_EDX(OPTYPE* pMyOperand, PDISASM pMyDisasm)
  * ======================================= */
 void __bea_callspec__ Addr_EBX(OPTYPE* pMyOperand, PDISASM pMyDisasm)
 {
-    #ifndef BEA_LIGHT_DISASSEMBLY
 	size_t i = 0;
+    #ifndef BEA_LIGHT_DISASSEMBLY
     if (GV.SYNTAX_ == ATSyntax) {
         (void) strcpy((char*) (*pMyOperand).OpMnemonic, "(%");
         i += 2;
@@ -510,8 +510,8 @@ void __bea_callspec__ Addr_ESI(OPTYPE* pMyOperand, PDISASM pMyDisasm)
  * ======================================= */
 void __bea_callspec__ Addr_EDI(OPTYPE* pMyOperand, PDISASM pMyDisasm)
 {
-    #ifndef BEA_LIGHT_DISASSEMBLY
 	size_t i = 0;
+    #ifndef BEA_LIGHT_DISASSEMBLY
     if (GV.SYNTAX_ == ATSyntax) {
         (void) strcpy((char*) (*pMyOperand).OpMnemonic, "(%");
         i += 2;
